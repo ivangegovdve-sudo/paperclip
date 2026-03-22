@@ -1,15 +1,27 @@
-# AGENTS.md
+# AGENTS.md - Paperclip Local Working Guide
 
-Guidance for human and AI contributors working in this repository.
+This repository is the Paperclip platform monorepo. Treat it as the upstream or platform-core workspace for AI-agent-company infrastructure, not as the place for business-specific clutter that belongs in `retailAI`.
 
-## 1. Purpose
+## Goal
 
-Paperclip is a control plane for AI-agent companies.
-The current implementation target is V1 and is defined in `doc/SPEC-implementation.md`.
+- understand, run, and extend the Paperclip platform responsibly
+- keep platform work distinct from company-specific implementations
+- use this repo for core control-plane capabilities, not for every downstream customization
 
-## 2. Read This First
+## Current Idea And Progress
 
-Before making changes, read in this order:
+- Product idea:
+  a control plane for AI-agent companies
+- Current state:
+  active monorepo with server, CLI, packages, docs, Docker, and database workflows
+- Local role:
+  platform-core reference and extension point
+- Current product maturity:
+  significant implementation already exists; this is not a greenfield repo
+
+## Read First
+
+Before substantial work, read:
 
 1. `doc/GOAL.md`
 2. `doc/PRODUCT.md`
@@ -17,129 +29,70 @@ Before making changes, read in this order:
 4. `doc/DEVELOPING.md`
 5. `doc/DATABASE.md`
 
-`doc/SPEC.md` is long-horizon product context.
-`doc/SPEC-implementation.md` is the concrete V1 build contract.
+## Initial Setup Requirements
 
-## 3. Repo Map
+- Node.js 20+
+- `pnpm`
+- Docker
+- local Postgres via Docker Compose
+- recommended commands:
+  `pnpm install`
+  `docker compose up -d db`
+  `pnpm dev`
 
-- `server/`: Express REST API and orchestration services
-- `ui/`: React + Vite board UI
-- `packages/db/`: Drizzle schema, migrations, DB clients
-- `packages/shared/`: shared types, constants, validators, API path constants
-- `doc/`: operational and product docs
+## Environments
 
-## 4. Dev Setup (Auto DB)
+- local development:
+  monorepo dev runner plus local database
+- quickstart / dockerized local environment:
+  use the provided compose files
+- untrusted review / smoke flows:
+  use the dedicated Docker assets where appropriate
+- production:
+  separate deployment concern, not something to improvise casually from the root
 
-Use embedded PGlite in dev by leaving `DATABASE_URL` unset.
+## Dependencies
 
-```sh
-pnpm install
-pnpm dev
-```
+- pnpm workspace packages
+- Node / TypeScript toolchain
+- Postgres
+- Docker and compose-based local infrastructure
+- platform docs in `doc/`
 
-This starts:
+## Backend Need
 
-- API: `http://localhost:3100`
-- UI: `http://localhost:3100` (served by API server in dev middleware mode)
+- backend required:
+  yes
+- backend shape:
+  server-side platform services backed by Postgres and supporting packages
+- root-level truth:
+  this repo is backend-meaningful; do not treat it as frontend-only
 
-Quick checks:
+## Backend Development Plan
 
-```sh
-curl http://localhost:3100/api/health
-curl http://localhost:3100/api/companies
-```
+1. Preserve the documented platform architecture.
+2. Keep schema and migration work disciplined.
+3. Add or change services only with a clear product need and corresponding docs.
+4. Keep platform concerns here and move company-specific policies to `retailAI`.
+5. Prefer upstream-compatible or platform-wide improvements over bespoke hacks.
 
-Reset local dev DB:
+## How Development Should Progress
 
-```sh
-rm -rf data/pglite
-pnpm dev
-```
+1. Use the root docs as the contract.
+2. Keep the monorepo understandable and package boundaries clean.
+3. Avoid embedding project-specific business logic that should live elsewhere.
+4. Strengthen onboarding, observability, and deployment reliability before adding speculative features.
+5. If your own company implementation diverges heavily, move that work into the dedicated companion repo.
 
-## 5. Core Engineering Rules
+## Relationship To retailAI
 
-1. Keep changes company-scoped.
-Every domain entity should be scoped to a company and company boundaries must be enforced in routes/services.
+- `paperclip`:
+  platform core
+- `retailAI`:
+  your business-specific company layer
 
-2. Keep contracts synchronized.
-If you change schema/API behavior, update all impacted layers:
-- `packages/db` schema and exports
-- `packages/shared` types/constants/validators
-- `server` routes/services
-- `ui` API clients and pages
+Keep that separation explicit.
 
-3. Preserve control-plane invariants.
-- Single-assignee task model
-- Atomic issue checkout semantics
-- Approval gates for governed actions
-- Budget hard-stop auto-pause behavior
-- Activity logging for mutating actions
+## End Goal
 
-4. Do not replace strategic docs wholesale unless asked.
-Prefer additive updates. Keep `doc/SPEC.md` and `doc/SPEC-implementation.md` aligned.
-
-5. Keep plan docs dated and centralized.
-New plan documents belong in `doc/plans/` and should use `YYYY-MM-DD-slug.md` filenames.
-
-## 6. Database Change Workflow
-
-When changing data model:
-
-1. Edit `packages/db/src/schema/*.ts`
-2. Ensure new tables are exported from `packages/db/src/schema/index.ts`
-3. Generate migration:
-
-```sh
-pnpm db:generate
-```
-
-4. Validate compile:
-
-```sh
-pnpm -r typecheck
-```
-
-Notes:
-- `packages/db/drizzle.config.ts` reads compiled schema from `dist/schema/*.js`
-- `pnpm db:generate` compiles `packages/db` first
-
-## 7. Verification Before Hand-off
-
-Run this full check before claiming done:
-
-```sh
-pnpm -r typecheck
-pnpm test:run
-pnpm build
-```
-
-If anything cannot be run, explicitly report what was not run and why.
-
-## 8. API and Auth Expectations
-
-- Base path: `/api`
-- Board access is treated as full-control operator context
-- Agent access uses bearer API keys (`agent_api_keys`), hashed at rest
-- Agent keys must not access other companies
-
-When adding endpoints:
-
-- apply company access checks
-- enforce actor permissions (board vs agent)
-- write activity log entries for mutations
-- return consistent HTTP errors (`400/401/403/404/409/422/500`)
-
-## 9. UI Expectations
-
-- Keep routes and nav aligned with available API surface
-- Use company selection context for company-scoped pages
-- Surface failures clearly; do not silently ignore API errors
-
-## 10. Definition of Done
-
-A change is done when all are true:
-
-1. Behavior matches `doc/SPEC-implementation.md`
-2. Typecheck, tests, and build pass
-3. Contracts are synced across db/shared/server/ui
-4. Docs updated when behavior or commands change
+The end goal is a clean, operable Paperclip platform workspace that can either track upstream closely or support careful platform-level extension, while your own company-specific implementation lives beside it instead of inside it.
